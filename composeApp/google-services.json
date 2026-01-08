@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "522904026394",
+    "project_id": "chatchat-c2838",
+    "storage_bucket": "chatchat-c2838.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522904026394:android:644ad5d7cc5d9c2613c0a3",
+        "android_client_info": {
+          "package_name": "com.softech.chit_chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjkwtc65-jHMkn4Mk33PTfb0jhQVCS7oM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522904026394:android:5ecbdcbe8409084f13c0a3",
+        "android_client_info": {
+          "package_name": "org.example.project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjkwtc65-jHMkn4Mk33PTfb0jhQVCS7oM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
