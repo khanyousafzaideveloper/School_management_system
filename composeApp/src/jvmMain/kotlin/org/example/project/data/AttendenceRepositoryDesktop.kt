@@ -8,10 +8,12 @@ import io.ktor.client.request.post
 import io.ktor.client.request.parameter
 import io.ktor.client.request.setBody
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.patch
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -34,7 +36,7 @@ class AttendanceRepositoryDesktop(
             json(
                 Json {
                     ignoreUnknownKeys = true   // 🔥 THIS FIXES IT
-                    prettyPrint = true
+                    prettyPrint = false
                     isLenient = true
                 }
             )
@@ -109,10 +111,87 @@ class AttendanceRepositoryDesktop(
     }
 
     // ------- Not implemented yet -------
-    override suspend fun getStudents(classId: String): List<Student> = emptyList()
-    override suspend fun addStudent(classId: String, student: Student) {}
-    override suspend fun addStudentsFromFile(classId: String, students: List<Student>) {}
-    override suspend fun updateStudent(classId: String, student: Student) {}
+    override suspend fun getStudents(classId: String): List<Student> {
+        println("🔥 Desktop → Fetching students for class = $classId")
+
+        return try {
+            val url = "$baseUrl/classes/$classId/students"
+            println("🌐 URL = $url?key=$apiKey")
+
+            val response = client.get(url) {
+                parameter("key", apiKey)
+            }.body<FirestoreResponse>()
+
+            println("📨 Students Raw Response = $response")
+
+            response.documents.mapNotNull { doc ->
+                val f = doc.fields ?: return@mapNotNull null
+
+                Student(
+                    id = doc.name.substringAfterLast("/"),
+                    name = f.name?.stringValue ?: "",
+                    rollNo = f.roll?.stringValue?.toInt() ?: 0
+                )
+            }
+
+        } catch (e: Exception) {
+            println("💥 ERROR fetching students")
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    override suspend fun addStudent(classId: String, student: Student) {
+        println("🔥 Desktop → Adding Student: ${student.name} in class $classId")
+
+        try {
+            val response = client.post("$baseUrl/classes/$classId/students") {
+                parameter("key", apiKey)
+                setBody(
+                    firestoreDoc {
+                        string("name", student.name)
+                        string("roll", student.rollNo.toString())
+                    }
+                )
+            }
+
+            println("✅ HTTP Status = ${response.status}")
+            println("📨 Raw Response = ${response.bodyAsText()}")
+
+        } catch (e: Exception) {
+            println("💥 ERROR adding student to Firestore")
+            e.printStackTrace()
+        }
+    }
+    override suspend fun addStudentsFromFile(classId: String, students: List<Student>) {
+        println("🔥 Desktop → Bulk Add Students (${students.size})")
+
+        students.forEach { addStudent(classId, it) }
+    }
+    override suspend fun updateStudent(classId: String, student: Student) {
+        println("🔥 Desktop → Updating Student: ${student.id}")
+
+        val docPath = "$baseUrl/classes/$classId/students/${student.id}"
+
+        try {
+            val response = client.patch(docPath) {
+                parameter("key", apiKey)
+                setBody(
+                    firestoreDoc {
+                        string("name", student.name)
+                        string("roll", student.rollNo.toString())
+                    }
+                )
+            }
+
+            println("✅ HTTP Status = ${response.status}")
+            println("📨 Raw Response = ${response.bodyAsText()}")
+
+        } catch (e: Exception) {
+            println("💥 ERROR updating student")
+            e.printStackTrace()
+        }
+    }
     override suspend fun deleteStudent(classId: String, studentId: String) {}
     override suspend fun getAttendance(classId: String, date: String): List<Attendance> = emptyList()
     override suspend fun markAttendance(classId: String, date: String, records: List<Attendance>) {}
@@ -153,3 +232,26 @@ class FirestoreFieldsBuilder {
         }
     }
 }
+
+
+@Serializable
+data class FirestoreResponse(
+    val documents: List<FirestoreDocument> = emptyList()
+)
+
+@Serializable
+data class FirestoreDocument(
+    val name: String,
+    val fields: FirestoreFields? = null
+)
+
+@Serializable
+data class FirestoreFields(
+    val name: FirestoreStringValue? = null,
+    val roll: FirestoreStringValue? = null
+)
+
+@Serializable
+data class FirestoreStringValue(
+    val stringValue: String? = null
+)
